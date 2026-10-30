@@ -1,0 +1,1449 @@
+!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoramento digital de água e energia: tecnologia para a economia doméstica sustentável</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        energy: {
+                            50: '#F0FDFA',
+                            100: '#CCFBF1',
+                            500: '#14B8A6',
+                            600: '#0D9488',
+                            700: '#0F766E',
+                        },
+                        water: {
+                            50: '#F0F9FF',
+                            100: '#E0F2FE',
+                            500: '#0284C7',
+                            600: '#0369A1',
+                            700: '#075985',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #F8FAFC;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Modal de Notificação Customizado -->
+    <div id="customModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-200 border border-slate-200" id="modalCard">
+            <div class="text-center">
+                <div id="modalIconContainer" class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-sky-50 text-sky-600 shadow-inner">
+                    <i id="modalIcon" class="fa-solid fa-info text-2xl"></i>
+                </div>
+                <h3 id="modalTitle" class="text-xl font-extrabold text-slate-900 mb-2">Notificação</h3>
+                <p id="modalMessage" class="text-sm text-slate-600 mb-6 leading-relaxed">Mensagem do sistema...</p>
+                <button onclick="closeModal()" class="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl shadow-md transition duration-150">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Ajuda / Acessibilidade (Onde encontrar a conta) -->
+    <div id="helpModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-3xl p-6 max-w-lg w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-200 border border-slate-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-question text-sky-600"></i> Como ler sua conta?
+                </h3>
+                <button onclick="closeHelpModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="space-y-4 text-sm text-slate-600">
+                <div class="p-4 bg-teal-50 rounded-2xl border border-teal-100">
+                    <h4 class="font-bold text-teal-800 flex items-center gap-2 mb-1">
+                        <i class="fa-solid fa-bolt"></i> Conta de Luz (Energia)
+                    </h4>
+                    <p class="text-xs">Procure pelo campo <span class="font-bold text-slate-800">"Consumo em kWh"</span> no quadro central de dados de medição. O período de leitura costuma ser de 28 a 32 dias.</p>
+                </div>
+                <div class="p-4 bg-sky-50 rounded-2xl border border-sky-100">
+                    <h4 class="font-bold text-sky-800 flex items-center gap-2 mb-1">
+                        <i class="fa-solid fa-droplet"></i> Conta de Água
+                    </h4>
+                    <p class="text-xs">Procure pelo campo <span class="font-bold text-slate-800">"Consumo Medido (m³)"</span> ou <span class="font-bold text-slate-800">"Volume Faturado"</span>. $1 m^3$ equivale a 1.000 litros de água.</p>
+                </div>
+            </div>
+            <button onclick="closeHelpModal()" class="w-full mt-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl transition">Entendi, Voltar</button>
+        </div>
+    </div>
+
+    <!-- Header Principal -->
+    <header class="bg-gradient-to-r from-blue-900 via-indigo-900 to-teal-900 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-3 bg-white/10 backdrop-blur-md rounded-2xl shadow-inner border border-white/20">
+                    <i class="fa-solid fa-leaf text-2xl text-teal-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-extrabold tracking-tight leading-tight">
+                        Monitoramento Digital de Água e Energia
+                    </h1>
+                    <p class="text-xs text-teal-100 font-medium">Tecnologia para a economia doméstica sustentável</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="openHelpModal()" class="bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-white/20">
+                    <i class="fa-solid fa-circle-info text-teal-300"></i> Onde achar na conta?
+                </button>
+                <button onclick="openRecordModal()" class="bg-teal-500 hover:bg-teal-400 text-slate-900 px-4 py-2 rounded-xl text-xs font-extrabold shadow-md transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus text-slate-900"></i> Novo Registro
+                </button>
+                <button onclick="exportDataJSON()" title="Exportar Backup" class="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition text-white">
+                    <i class="fa-solid fa-download"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs / Seções do App -->
+    <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-[73px] z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-2 sm:space-x-4 overflow-x-auto custom-scrollbar py-2">
+            <button onclick="switchTab('dashboard')" id="tabBtn-dashboard" class="py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition flex items-center gap-2 bg-blue-600 text-white shadow-sm">
+                <i class="fa-solid fa-chart-pie"></i> 1. Painel Principal
+            </button>
+            <button onclick="switchTab('tariffs')" id="tabBtn-tariffs" class="py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition flex items-center gap-2 bg-slate-100 text-slate-600 hover:bg-slate-200">
+                <i class="fa-solid fa-receipt"></i> 2. Tarifas & Bandeiras
+            </button>
+            <button onclick="switchTab('planning')" id="tabBtn-planning" class="py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition flex items-center gap-2 bg-slate-100 text-slate-600 hover:bg-slate-200">
+                <i class="fa-solid fa-bullseye"></i> 3. Metas & Alertas
+            </button>
+            <button onclick="switchTab('estimates')" id="tabBtn-estimates" class="py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition flex items-center gap-2 bg-slate-100 text-slate-600 hover:bg-slate-200">
+                <i class="fa-solid fa-calculator"></i> 4. Previsões & Simulador
+            </button>
+            <button onclick="switchTab('sustainability')" id="tabBtn-sustainability" class="py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition flex items-center gap-2 bg-slate-100 text-slate-600 hover:bg-slate-200">
+                <i class="fa-solid fa-hand-holding-hand"></i> 5. Ações & Lembretes
+            </button>
+            <button onclick="switchTab('academic')" id="tabBtn-academic" class="py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition flex items-center gap-2 bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200">
+                <i class="fa-solid fa-graduation-cap text-purple-600"></i> 6. Painel de Extensão Acadêmica
+            </button>
+        </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- ================= TAB 1: PAINEL PRINCIPAL ================= -->
+        <div id="tab-dashboard" class="space-y-6">
+
+            <!-- Banner Alerta Inteligente de Aumento -->
+            <div id="alertContainer" class="space-y-3"></div>
+
+            <!-- Destaques de Medição (Paleta Suave e Profissional) -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Card Consumo Energia -->
+                <div class="bg-gradient-to-br from-teal-700 to-teal-800 text-white p-5 rounded-3xl shadow-sm flex flex-col justify-between relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-teal-100">Energia (Última Medição)</span>
+                        <span class="p-2.5 bg-white/10 rounded-2xl backdrop-blur-md"><i class="fa-solid fa-bolt text-xl text-teal-200"></i></span>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-black" id="cardEnergyKwh">-- kWh</div>
+                        <div class="text-xs text-teal-100 mt-1 font-semibold" id="cardEnergyDaily">-- kWh/dia (Média diária)</div>
+                    </div>
+                </div>
+
+                <!-- Card Valor Energia -->
+                <div class="bg-gradient-to-br from-teal-800 to-slate-800 text-white p-5 rounded-3xl shadow-sm flex flex-col justify-between relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-teal-100">Fatura Energia</span>
+                        <span class="p-2.5 bg-white/10 rounded-2xl backdrop-blur-md"><i class="fa-solid fa-file-invoice-dollar text-xl text-teal-200"></i></span>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-black" id="cardEnergyCost">R$ --</div>
+                        <div class="text-xs text-teal-100 mt-1 font-semibold" id="cardEnergyAvgPrice">R$ -- / kWh</div>
+                    </div>
+                </div>
+
+                <!-- Card Consumo Água -->
+                <div class="bg-gradient-to-br from-sky-600 to-blue-700 text-white p-5 rounded-3xl shadow-sm flex flex-col justify-between relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-sky-100">Água (Última Medição)</span>
+                        <span class="p-2.5 bg-white/10 rounded-2xl backdrop-blur-md"><i class="fa-solid fa-droplet text-xl text-sky-200"></i></span>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-black" id="cardWaterM3">-- m³</div>
+                        <div class="text-xs text-sky-100 mt-1 font-semibold" id="cardWaterDaily">-- m³/dia (Média diária)</div>
+                    </div>
+                </div>
+
+                <!-- Card Valor Água -->
+                <div class="bg-gradient-to-br from-blue-700 to-indigo-900 text-white p-5 rounded-3xl shadow-sm flex flex-col justify-between relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-sky-100">Fatura Água</span>
+                        <span class="p-2.5 bg-white/10 rounded-2xl backdrop-blur-md"><i class="fa-solid fa-receipt text-xl text-sky-200"></i></span>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-black" id="cardWaterCost">R$ --</div>
+                        <div class="text-xs text-sky-100 mt-1 font-semibold" id="cardWaterAvgPrice">R$ -- / m³</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção de Comparação Diária Personalizada -->
+            <section class="bg-slate-900 text-white p-6 rounded-3xl shadow-md border border-slate-800">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-lg font-black flex items-center gap-2.5 text-teal-300">
+                            <i class="fa-solid fa-scale-balanced text-xl"></i>
+                            Comparador Diário Ajustado por Período
+                        </h2>
+                        <p class="text-xs text-slate-400">Corrige distorções de contas que possuem quantidade de dias diferentes</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 text-slate-900">
+                        <select id="compareMonth1" onchange="updateComparison()" class="bg-white font-bold text-xs sm:text-sm px-3 py-2 rounded-xl outline-none shadow-sm"></select>
+                        <span class="text-white font-bold text-xs">VS</span>
+                        <select id="compareMonth2" onchange="updateComparison()" class="bg-white font-bold text-xs sm:text-sm px-3 py-2 rounded-xl outline-none shadow-sm"></select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="comparisonResults"></div>
+            </section>
+
+            <!-- Gráficos de Evolução Separados -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Gráfico de Consumo Físico -->
+                <div class="bg-teal-50/40 p-5 rounded-3xl border border-teal-100 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-extrabold text-teal-900 text-base">Evolução do Consumo Físico</h3>
+                            <p class="text-xs text-teal-700">Medição em kWh e m³</p>
+                        </div>
+                        <span class="p-2 bg-teal-100 text-teal-800 rounded-xl text-xs font-bold">Volume</span>
+                    </div>
+                    <div class="relative w-full h-64 bg-white p-3 rounded-2xl border border-teal-50">
+                        <canvas id="consumptionChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Valores Pagos -->
+                <div class="bg-blue-50/40 p-5 rounded-3xl border border-blue-100 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-extrabold text-blue-900 text-base">Evolução dos Valores Pagos</h3>
+                            <p class="text-xs text-blue-700">Histórico em Reais (R$)</p>
+                        </div>
+                        <span class="p-2 bg-blue-100 text-blue-800 rounded-xl text-xs font-bold">Financeiro</span>
+                    </div>
+                    <div class="relative w-full h-64 bg-white p-3 rounded-2xl border border-blue-50">
+                        <canvas id="costChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Histórico e Edição -->
+            <section class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-5 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h3 class="font-extrabold text-slate-800 text-base">Histórico de Contas e Registros</h3>
+                        <p class="text-xs text-slate-500">Registros independentes de energia elétrica e água</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="exportCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-csv"></i> Exportar CSV
+                        </button>
+                        <button onclick="openRecordModal()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-plus"></i> Adicionar
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-sm text-slate-600">
+                        <thead class="bg-slate-100 text-xs uppercase text-slate-500 font-extrabold border-b border-slate-200">
+                            <tr>
+                                <th class="px-5 py-3">Mês/Ano</th>
+                                <th class="px-5 py-3">Período (Dias)</th>
+                                <th class="px-5 py-3">Energia (kWh / R$)</th>
+                                <th class="px-5 py-3">Média Diária kWh</th>
+                                <th class="px-5 py-3">Água (m³ / R$)</th>
+                                <th class="px-5 py-3">Média Diária m³</th>
+                                <th class="px-5 py-3 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-slate-200"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- ================= TAB 2: TARIFAS & BANDEIRAS ================= -->
+        <div id="tab-tariffs" class="space-y-6 hidden">
+            <div class="bg-teal-50/50 p-6 rounded-3xl border border-teal-200 shadow-sm">
+                <h2 class="text-lg font-black text-teal-900 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-teal-600"></i> Cadastro e Vigência de Tarifas
+                </h2>
+                <p class="text-xs text-teal-700 mb-6">Mantenha o valor do kWh, faixas de água e adicionais de bandeiras tarifárias atualizados.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Configuração Energia -->
+                    <div class="bg-white p-5 rounded-2xl border border-teal-100 space-y-4 shadow-sm">
+                        <h3 class="font-extrabold text-teal-900 border-b pb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-bolt text-teal-600"></i> Tarifa de Energia Elétrica
+                        </h3>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Tarifa Base por kWh (R$)</label>
+                            <input type="number" step="0.001" id="tariffEnergyRate" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Bandeira Tarifária / Adicional (R$ / kWh)</label>
+                            <select id="tariffEnergyFlag" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold">
+                                <option value="0.00">Verde (Sem adicional)</option>
+                                <option value="0.01885">Amarela (+ R$ 0,01885/kWh)</option>
+                                <option value="0.04463">Vermelha 1 (+ R$ 0,04463/kWh)</option>
+                                <option value="0.07877">Vermelha 2 (+ R$ 0,07877/kWh)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Configuração Faixas Água -->
+                    <div class="bg-white p-5 rounded-2xl border border-sky-100 space-y-4 shadow-sm">
+                        <h3 class="font-extrabold text-sky-900 border-b pb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-droplet text-sky-600"></i> Tarifa de Água por Faixas
+                        </h3>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Faixa Básica (Até 10 m³) - Valor Mínimo R$</label>
+                            <input type="number" step="0.01" id="tariffWaterTier1" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Excedente (Acima de 10 m³) - R$ por m³ extra</label>
+                            <input type="number" step="0.01" id="tariffWaterTier2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button onclick="saveTariffs()" class="bg-teal-600 hover:bg-teal-700 text-white font-extrabold px-6 py-3 rounded-2xl shadow-md transition">
+                        Salvar Tarifas
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: METAS & ALERTAS ================= -->
+        <div id="tab-planning" class="space-y-6 hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Metas Físicas e R$ -->
+                <div class="bg-emerald-50/50 p-6 rounded-3xl border border-emerald-200 space-y-4 shadow-sm">
+                    <h3 class="font-extrabold text-emerald-900 text-base flex items-center gap-2">
+                        <i class="fa-solid fa-bullseye text-emerald-600"></i> Metas da Família
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold text-emerald-800 mb-1">Meta Mensal Energia (kWh)</label>
+                            <input type="number" id="goalEnergyKwh" class="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 text-sm font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-emerald-800 mb-1">Meta Mensal Água (m³)</label>
+                            <input type="number" id="goalWaterM3" class="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 text-sm font-bold">
+                        </div>
+                        <button onclick="saveGoals()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition">
+                            Atualizar Metas
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sensibilidade do Alerta de Aumento -->
+                <div class="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm">
+                    <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-blue-600"></i> Configurar Alerta de Aumento
+                    </h3>
+                    <p class="text-xs text-slate-600">Avisar quando a média diária do mês atual superar a do mês anterior por esta porcentagem:</p>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Sensibilidade do Alerta (% de aumento)</label>
+                        <select id="alertThreshold" onchange="saveAlertThreshold()" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold">
+                            <option value="5">5% de aumento (Muito sensível)</option>
+                            <option value="10">10% de aumento (Recomendado)</option>
+                            <option value="20">20% de aumento (Tolerante)</option>
+                        </select>
+                    </div>
+                    <div class="text-xs text-slate-500 font-medium">Os alertas aparecerão na página principal para chamar atenção rápida da família.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 4: PREVISÕES & SIMULADOR ================= -->
+        <div id="tab-estimates" class="space-y-6 hidden">
+            <!-- Estimativa com Leitura Intermediária -->
+            <div class="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-6 rounded-3xl shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div>
+                        <h3 class="font-extrabold text-teal-300 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Previsão da Próxima Conta por Leitura Intermediária
+                        </h3>
+                        <p class="text-xs text-slate-300">Faça uma leitura no relógio hoje e saiba quanto virá a próxima conta antes dela chegar!</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                    <div>
+                        <label class="block text-xs text-slate-300 font-bold mb-1">Dias decorridos do mês atual</label>
+                        <input type="number" id="interDays" value="15" onchange="calcIntermedForecast()" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 font-bold mb-1">Energia consumida até hoje (kWh)</label>
+                        <input type="number" id="interKwh" value="110" onchange="calcIntermedForecast()" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 font-bold mb-1">Água consumida até hoje (m³)</label>
+                        <input type="number" id="interM3" value="7" onchange="calcIntermedForecast()" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white">
+                    </div>
+                </div>
+
+                <div class="p-4 bg-white/5 rounded-2xl border border-white/10 grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                    <div>
+                        <div class="text-xs text-slate-400">Projeção Energia (30 dias)</div>
+                        <div class="text-xl font-extrabold text-teal-300" id="forecastInterEnergy">R$ --</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400">Projeção Água (30 dias)</div>
+                        <div class="text-xl font-extrabold text-sky-300" id="forecastInterWater">R$ --</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400">Total Previsto Próxima Conta</div>
+                        <div class="text-2xl font-black text-emerald-400" id="forecastInterTotal">R$ --</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulador de Economia -->
+            <div class="bg-teal-50/50 p-6 rounded-3xl border border-teal-200 shadow-sm space-y-4">
+                <h3 class="font-extrabold text-teal-900 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-piggy-bank text-teal-600"></i> Simulador de Economia Prática
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-teal-800 mb-1">Meta de Redução do Consumo: <span id="simPercLabel" class="text-teal-600 font-extrabold">15%</span></label>
+                            <input type="range" id="simPerc" min="5" max="40" step="5" value="15" oninput="runSimulation()" class="w-full accent-teal-600">
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-teal-100 space-y-2 shadow-sm">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-600">Economia Estimada por Mês:</span>
+                            <span class="font-extrabold text-teal-700" id="simMonthlySavings">R$ 0,00</span>
+                        </div>
+                        <div class="flex justify-between text-sm border-t pt-2">
+                            <span class="text-slate-600">Economia em 1 Ano:</span>
+                            <span class="font-black text-teal-700 text-lg" id="simYearlySavings">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 5: AÇÕES & LEMBRETES ================= -->
+        <div id="tab-sustainability" class="space-y-6 hidden">
+            <!-- Diário de Ações Sustentáveis -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                <h3 class="font-extrabold text-slate-800 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-seedling text-teal-600"></i> Registro de Ações Adotadas pela Família
+                </h3>
+                <p class="text-xs text-slate-500">Anote atitudes (ex: conserto de vazamentos, troca de lâmpadas) e compare o consumo depois da data registrada.</p>
+
+                <form onsubmit="addAction(event)" class="flex flex-col sm:flex-row gap-3">
+                    <input type="text" id="actionText" required placeholder="Ex: Consertado vazamento na descarga da suíte" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold">
+                    <select id="actionCategory" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold">
+                        <option value="energy">Energia</option>
+                        <option value="water">Água</option>
+                        <option value="both">Ambos</option>
+                    </select>
+                    <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-extrabold px-5 py-2.5 rounded-xl text-sm transition shadow-sm">
+                        Anotar Ação
+                    </button>
+                </form>
+
+                <div id="actionList" class="space-y-2 pt-2"></div>
+            </div>
+
+            <!-- Lembretes e Rotina de Leitura -->
+            <div class="bg-blue-50/50 p-6 rounded-3xl border border-blue-200 shadow-sm space-y-4">
+                <h3 class="font-extrabold text-blue-900 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-bell text-blue-600"></i> Lembretes de Leitura das Contas
+                </h3>
+                <p class="text-xs text-blue-700">Manter os registros sempre em dia evita surpresas no final do mês.</p>
+
+                <div class="bg-white p-4 rounded-2xl border border-blue-100 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="p-3 bg-blue-100 text-blue-700 rounded-xl"><i class="fa-solid fa-calendar-check text-lg"></i></div>
+                        <div>
+                            <div class="font-bold text-sm text-slate-800">Dia preferencial de leitura das contas</div>
+                            <div class="text-xs text-slate-500">Sugerimos anotar a medição todo dia 25 do mês</div>
+                        </div>
+                    </div>
+                    <span class="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">Ativo</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 6: PAINEL DE EXTENSÃO ACADÊMICA ================= -->
+        <div id="tab-academic" class="space-y-6 hidden">
+            <!-- Header do Painel Acadêmico -->
+            <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-6 rounded-3xl shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <span class="bg-purple-500/30 text-purple-200 text-xs font-bold px-3 py-1 rounded-full uppercase border border-purple-400/30">Atividade de Extensão Universitária</span>
+                    <h2 class="text-xl font-black mt-2 text-purple-100">Relatório e Dashboard de Apresentação</h2>
+                    <p class="text-xs text-purple-200/80 mt-1">Sintetize os resultados do monitoramento doméstico para uso em banners, apresentações de slides ou relatórios finais de extensão.</p>
+                </div>
+                <button onclick="window.print()" class="bg-purple-500 hover:bg-purple-400 text-slate-950 font-extrabold px-5 py-3 rounded-2xl shadow-md transition flex items-center gap-2 text-xs sm:text-sm">
+                    <i class="fa-solid fa-print"></i> Imprimir / Gerar PDF do Relatório
+                </button>
+            </div>
+
+            <!-- Indicadores Socioambientais Calculados -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-3xl border border-purple-100 shadow-sm space-y-1">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Total de Registros</span>
+                    <div class="text-2xl font-black text-slate-800" id="acadTotalMonths">0 Meses</div>
+                    <span class="text-[11px] text-purple-600 font-semibold">Período Acompanhado</span>
+                </div>
+                <div class="bg-white p-5 rounded-3xl border border-teal-100 shadow-sm space-y-1">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Volume Total Energia</span>
+                    <div class="text-2xl font-black text-teal-700" id="acadTotalEnergy">0 kWh</div>
+                    <span class="text-[11px] text-teal-600 font-semibold" id="acadEnergyCo2">~0 kg de CO₂ emitidos</span>
+                </div>
+                <div class="bg-white p-5 rounded-3xl border border-sky-100 shadow-sm space-y-1">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Volume Total Água</span>
+                    <div class="text-2xl font-black text-sky-700" id="acadTotalWater">0 m³</div>
+                    <span class="text-[11px] text-sky-600 font-semibold" id="acadWaterLiters">0 Litros consumidos</span>
+                </div>
+                <div class="bg-white p-5 rounded-3xl border border-emerald-100 shadow-sm space-y-1">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Investimento Total</span>
+                    <div class="text-2xl font-black text-emerald-700" id="acadTotalInvested">R$ 0,00</div>
+                    <span class="text-[11px] text-emerald-600 font-semibold">Soma das Faturas</span>
+                </div>
+            </div>
+
+            <!-- Síntese Acadêmica para Apresentação -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                <div class="border-b pb-4">
+                    <h3 class="font-extrabold text-slate-900 text-lg flex items-center gap-2">
+                        <i class="fa-solid fa-file-contract text-purple-600"></i> Resumo Executivo da Atividade
+                    </h3>
+                    <p class="text-xs text-slate-500">Utilize o texto abaixo como introdução ou conclusões no seu relatório acadêmico.</p>
+                </div>
+
+                <div class="p-5 bg-purple-50/50 rounded-2xl border border-purple-100 text-sm leading-relaxed text-slate-700 space-y-3" id="acadSummaryText">
+                    <!-- Gerado via JS -->
+                </div>
+
+                <!-- Quadro de Ações e Impactos para o Banner / Slides -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+                        <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-teal-600"></i> Metodologia Aplicada
+                        </h4>
+                        <ul class="text-xs text-slate-600 space-y-2 list-disc pl-4">
+                            <li>Coleta sistemática de faturas mensais de água ($m^3$) e energia ($kWh$).</li>
+                            <li>Normalização por consumo diário ($\text{medida}/\text{dias}$) para neutralizar diferenças nos ciclos de leitura.</li>
+                            <li>Acompanhamento de metas com alertas configurados de acréscimo de consumo.</li>
+                            <li>Registro e monitoramento contínuo de intervenções de conscientização familiar.</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+                        <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-purple-600"></i> Resultados Obtidos
+                        </h4>
+                        <div id="acadResultsBox" class="text-xs text-slate-600 space-y-2">
+                            <!-- Gerado via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal para Adicionar/Editar Registro -->
+    <div id="recordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-3xl p-6 max-w-lg w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar border border-slate-200">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                <h3 class="text-lg font-black text-slate-800" id="recordModalTitle">Novo Registro Mensal</h3>
+                <button onclick="closeRecordModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <form id="recordForm" onsubmit="saveRecord(event)" class="space-y-4">
+                <input type="hidden" id="editIndex" value="-1">
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-extrabold uppercase text-slate-500 mb-1" for="inputPeriod">Mês e Ano</label>
+                        <input type="month" id="inputPeriod" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-bold text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-extrabold uppercase text-slate-500 mb-1" for="inputDays">Dias no Período</label>
+                        <input type="number" id="inputDays" min="15" max="45" value="30" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 font-bold text-sm">
+                    </div>
+                </div>
+
+                <!-- Energia -->
+                <div class="p-4 bg-teal-50 border border-teal-200 rounded-2xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-teal-900 font-extrabold text-sm flex items-center gap-1.5"><i class="fa-solid fa-bolt text-teal-600"></i> Energia Elétrica</span>
+                        <span class="text-[10px] bg-teal-200/80 text-teal-900 font-bold px-2 py-0.5 rounded-full uppercase">Opcional</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-600 font-bold mb-1">Consumo (kWh)</label>
+                            <input type="number" step="0.1" min="0" id="inputEnergyKwh" class="w-full bg-white border border-teal-200 rounded-xl px-3 py-2 text-sm font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-600 font-bold mb-1">Valor Fatura (R$)</label>
+                            <input type="number" step="0.01" min="0" id="inputEnergyCost" class="w-full bg-white border border-teal-200 rounded-xl px-3 py-2 text-sm font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Água -->
+                <div class="p-4 bg-sky-50 border border-sky-200 rounded-2xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sky-900 font-extrabold text-sm flex items-center gap-1.5"><i class="fa-solid fa-droplet text-sky-600"></i> Água e Esgoto</span>
+                        <span class="text-[10px] bg-sky-200/80 text-sky-900 font-bold px-2 py-0.5 rounded-full uppercase">Opcional</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-600 font-bold mb-1">Consumo (m³)</label>
+                            <input type="number" step="0.1" min="0" id="inputWaterM3" class="w-full bg-white border border-sky-200 rounded-xl px-3 py-2 text-sm font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-600 font-bold mb-1">Valor Fatura (R$)</label>
+                            <input type="number" step="0.01" min="0" id="inputWaterCost" class="w-full bg-white border border-sky-200 rounded-xl px-3 py-2 text-sm font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeRecordModal()" class="px-4 py-2 text-slate-500 font-bold rounded-xl text-sm">Cancelar</button>
+                    <button type="submit" class="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold rounded-xl text-sm transition shadow-md">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 font-medium">
+            Monitoramento digital de água e energia &copy; 2026 — Tecnologia e Acessibilidade para a Economia Sustentável
+        </div>
+    </footer>
+
+    <script>
+        // Dados do App - Inicialização Vazia para Uso Real com Persistência
+        let records = [];
+        let goals = { energyKwh: 200, waterM3: 15 };
+        let alertThreshold = 10; // 10%
+        let tariffs = { energyRate: 0.88, energyFlag: 0.0, waterTier1: 45.00, waterTier2: 6.50 };
+        let actions = [];
+
+        let consumptionChart = null;
+        let costChart = null;
+
+        window.onload = function() {
+            loadFromLocalStorage();
+            initCharts();
+            loadTariffInputs();
+            updateUI();
+        };
+
+        // Função Principal de Atualização da Interface
+        function updateUI() {
+            records.sort((a, b) => a.period.localeCompare(b.period));
+            
+            renderTable();
+            updateCards();
+            updateCharts();
+            populateComparisonSelects();
+            updateComparison();
+            checkAlertsAndGoals();
+            calcIntermedForecast();
+            runSimulation();
+            renderActions();
+            updateAcademicTab();
+        }
+
+        // Atualização dos Cards Superiores
+        function updateCards() {
+            if (records.length === 0) {
+                document.getElementById('cardEnergyKwh').innerText = '-- kWh';
+                document.getElementById('cardEnergyDaily').innerText = '-- kWh/dia (Média diária)';
+                document.getElementById('cardEnergyCost').innerText = 'R$ --';
+                document.getElementById('cardEnergyAvgPrice').innerText = 'R$ -- / kWh';
+
+                document.getElementById('cardWaterM3').innerText = '-- m³';
+                document.getElementById('cardWaterDaily').innerText = '-- m³/dia (Média diária)';
+                document.getElementById('cardWaterCost').innerText = 'R$ --';
+                document.getElementById('cardWaterAvgPrice').innerText = 'R$ -- / m³';
+                return;
+            }
+
+            const latestEnergy = [...records].reverse().find(r => r.energyKwh !== null && r.energyKwh !== undefined);
+            if (latestEnergy) {
+                document.getElementById('cardEnergyKwh').innerText = `${latestEnergy.energyKwh} kWh`;
+                document.getElementById('cardEnergyDaily').innerText = `${(latestEnergy.energyKwh / latestEnergy.days).toFixed(1)} kWh/dia (Média diária)`;
+                document.getElementById('cardEnergyCost').innerText = formatCurrency(latestEnergy.energyCost);
+                const avgPrice = latestEnergy.energyCost && latestEnergy.energyKwh ? (latestEnergy.energyCost / latestEnergy.energyKwh).toFixed(2) : '--';
+                document.getElementById('cardEnergyAvgPrice').innerText = `R$ ${avgPrice} / kWh`;
+            } else {
+                document.getElementById('cardEnergyKwh').innerText = '-- kWh';
+                document.getElementById('cardEnergyDaily').innerText = '-- kWh/dia';
+                document.getElementById('cardEnergyCost').innerText = 'R$ --';
+                document.getElementById('cardEnergyAvgPrice').innerText = 'R$ -- / kWh';
+            }
+
+            const latestWater = [...records].reverse().find(r => r.waterM3 !== null && r.waterM3 !== undefined);
+            if (latestWater) {
+                document.getElementById('cardWaterM3').innerText = `${latestWater.waterM3} m³`;
+                document.getElementById('cardWaterDaily').innerText = `${(latestWater.waterM3 / latestWater.days).toFixed(1)} m³/dia (Média diária)`;
+                document.getElementById('cardWaterCost').innerText = formatCurrency(latestWater.waterCost);
+                const avgPrice = latestWater.waterCost && latestWater.waterM3 ? (latestWater.waterCost / latestWater.waterM3).toFixed(2) : '--';
+                document.getElementById('cardWaterAvgPrice').innerText = `R$ ${avgPrice} / m³`;
+            } else {
+                document.getElementById('cardWaterM3').innerText = '-- m³';
+                document.getElementById('cardWaterDaily').innerText = '-- m³/dia';
+                document.getElementById('cardWaterCost').innerText = 'R$ --';
+                document.getElementById('cardWaterAvgPrice').innerText = 'R$ -- / m³';
+            }
+        }
+
+        // Seletores e Cálculo do Comparador Diário
+        function populateComparisonSelects() {
+            const select1 = document.getElementById('compareMonth1');
+            const select2 = document.getElementById('compareMonth2');
+
+            if (!select1 || !select2) return;
+
+            const val1 = select1.value;
+            const val2 = select2.value;
+
+            select1.innerHTML = '';
+            select2.innerHTML = '';
+
+            if (records.length === 0) {
+                select1.innerHTML = '<option value="">Sem dados</option>';
+                select2.innerHTML = '<option value="">Sem dados</option>';
+                return;
+            }
+
+            records.forEach(r => {
+                const opt1 = document.createElement('option');
+                opt1.value = r.period;
+                opt1.innerText = formatPeriodLabel(r.period);
+                select1.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = r.period;
+                opt2.innerText = formatPeriodLabel(r.period);
+                select2.appendChild(opt2);
+            });
+
+            if (val1 && [...select1.options].some(o => o.value === val1)) {
+                select1.value = val1;
+            } else {
+                select1.selectedIndex = Math.max(0, records.length - 2);
+            }
+
+            if (val2 && [...select2.options].value === val2) {
+                select2.value = val2;
+            } else {
+                select2.selectedIndex = records.length - 1;
+            }
+        }
+
+        function updateComparison() {
+            const container = document.getElementById('comparisonResults');
+            if (!container) return;
+
+            const p1 = document.getElementById('compareMonth1')?.value;
+            const p2 = document.getElementById('compareMonth2')?.value;
+
+            const rec1 = records.find(r => r.period === p1);
+            const rec2 = records.find(r => r.period === p2);
+
+            if (!rec1 || !rec2) {
+                container.innerHTML = `<div class="col-span-2 text-slate-400 text-xs text-center py-4">Cadastre ao menos 2 meses para comparar períodos.</div>`;
+                return;
+            }
+
+            const dailyEnergy1 = rec1.energyKwh !== null ? (rec1.energyKwh / rec1.days) : null;
+            const dailyEnergy2 = rec2.energyKwh !== null ? (rec2.energyKwh / rec2.days) : null;
+
+            const dailyWater1 = rec1.waterM3 !== null ? (rec1.waterM3 / rec1.days) : null;
+            const dailyWater2 = rec2.waterM3 !== null ? (rec2.waterM3 / rec2.days) : null;
+
+            let energyDiffText = 'Sem dados suficientes';
+            if (dailyEnergy1 !== null && dailyEnergy2 !== null && dailyEnergy1 > 0) {
+                const diffPerc = ((dailyEnergy2 - dailyEnergy1) / dailyEnergy1) * 100;
+                const signal = diffPerc > 0 ? '+' : '';
+                const colorClass = diffPerc > 0 ? 'text-amber-400' : 'text-emerald-400';
+                energyDiffText = `<span class="${colorClass} font-bold">${signal}${diffPerc.toFixed(1)}% / dia</span>`;
+            }
+
+            let waterDiffText = 'Sem dados suficientes';
+            if (dailyWater1 !== null && dailyWater2 !== null && dailyWater1 > 0) {
+                const diffPerc = ((dailyWater2 - dailyWater1) / dailyWater1) * 100;
+                const signal = diffPerc > 0 ? '+' : '';
+                const colorClass = diffPerc > 0 ? 'text-amber-400' : 'text-emerald-400';
+                waterDiffText = `<span class="${colorClass} font-bold">${signal}${diffPerc.toFixed(1)}% / dia</span>`;
+            }
+
+            container.innerHTML = `
+                <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 space-y-2">
+                    <div class="flex justify-between items-center text-xs text-slate-400">
+                        <span><i class="fa-solid fa-bolt text-teal-400"></i> Média Diária Energia</span>
+                        <span>${formatPeriodLabel(rec1.period)} vs ${formatPeriodLabel(rec2.period)}</span>
+                    </div>
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-sm font-bold text-slate-200">${dailyEnergy1 !== null ? dailyEnergy1.toFixed(2) : '--'} vs ${dailyEnergy2 !== null ? dailyEnergy2.toFixed(2) : '--'} kWh/dia</span>
+                        <span class="text-xs">${energyDiffText}</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 space-y-2">
+                    <div class="flex justify-between items-center text-xs text-slate-400">
+                        <span><i class="fa-solid fa-droplet text-sky-400"></i> Média Diária Água</span>
+                        <span>${formatPeriodLabel(rec1.period)} vs ${formatPeriodLabel(rec2.period)}</span>
+                    </div>
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-sm font-bold text-slate-200">${dailyWater1 !== null ? dailyWater1.toFixed(2) : '--'} vs ${dailyWater2 !== null ? dailyWater2.toFixed(2) : '--'} m³/dia</span>
+                        <span class="text-xs">${waterDiffText}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Funções Formatação
+        function formatCurrency(val) {
+            if (val === null || val === undefined || isNaN(val)) return 'R$ --';
+            return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function formatPeriodLabel(periodStr) {
+            if (!periodStr) return '--';
+            const [year, month] = periodStr.split('-');
+            const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            const idx = parseInt(month, 10) - 1;
+            return `${months[idx] || month}/${year}`;
+        }
+
+        // Modal de Registro
+        function openRecordModal(index = -1) {
+            const modal = document.getElementById('recordModal');
+            const title = document.getElementById('recordModalTitle');
+            const form = document.getElementById('recordForm');
+            document.getElementById('editIndex').value = index;
+
+            if (index >= 0) {
+                title.innerText = "Editar Registro Mensal";
+                const rec = records[index];
+                document.getElementById('inputPeriod').value = rec.period;
+                document.getElementById('inputDays').value = rec.days;
+                document.getElementById('inputEnergyKwh').value = rec.energyKwh !== null ? rec.energyKwh : '';
+                document.getElementById('inputEnergyCost').value = rec.energyCost !== null ? rec.energyCost : '';
+                document.getElementById('inputWaterM3').value = rec.waterM3 !== null ? rec.waterM3 : '';
+                document.getElementById('inputWaterCost').value = rec.waterCost !== null ? rec.waterCost : '';
+            } else {
+                title.innerText = "Novo Registro Mensal";
+                form.reset();
+                document.getElementById('editIndex').value = -1;
+                // Preenche mês atual como padrão
+                const now = new Date();
+                const monthStr = now.toISOString().substring(0, 7);
+                document.getElementById('inputPeriod').value = monthStr;
+                document.getElementById('inputDays').value = 30;
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeRecordModal() {
+            const modal = document.getElementById('recordModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        function editRecord(idx) {
+            openRecordModal(idx);
+        }
+
+        // Inicialização dos Gráficos com Chart.js
+        function initCharts() {
+            const ctxConsumption = document.getElementById('consumptionChart').getContext('2d');
+            const ctxCost = document.getElementById('costChart').getContext('2d');
+
+            consumptionChart = new Chart(ctxConsumption, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Energia (kWh)',
+                            data: [],
+                            backgroundColor: '#0D9488',
+                            borderRadius: 8,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Água (m³)',
+                            data: [],
+                            backgroundColor: '#0284C7',
+                            borderRadius: 8,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: true, text: 'kWh' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'm³' }
+                        }
+                    }
+                }
+            });
+
+            costChart = new Chart(ctxCost, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Energia (R$)',
+                            data: [],
+                            borderColor: '#0D9488',
+                            backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: 'Água (R$)',
+                            data: [],
+                            borderColor: '#0284C7',
+                            backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.3,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) { return 'R$ ' + value; }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            if (!consumptionChart || !costChart) return;
+
+            const labels = records.map(r => formatPeriodLabel(r.period));
+            const energyKwhData = records.map(r => r.energyKwh);
+            const waterM3Data = records.map(r => r.waterM3);
+            const energyCostData = records.map(r => r.energyCost);
+            const waterCostData = records.map(r => r.waterCost);
+
+            consumptionChart.data.labels = labels;
+            consumptionChart.data.datasets[0].data = energyKwhData;
+            consumptionChart.data.datasets[1].data = waterM3Data;
+            consumptionChart.update();
+
+            costChart.data.labels = labels;
+            costChart.data.datasets[0].data = energyCostData;
+            costChart.data.datasets[1].data = waterCostData;
+            costChart.update();
+        }
+
+        function loadTariffInputs() {
+            document.getElementById('tariffEnergyRate').value = tariffs.energyRate;
+            document.getElementById('tariffEnergyFlag').value = tariffs.energyFlag;
+            document.getElementById('tariffWaterTier1').value = tariffs.waterTier1;
+            document.getElementById('tariffWaterTier2').value = tariffs.waterTier2;
+            document.getElementById('goalEnergyKwh').value = goals.energyKwh;
+            document.getElementById('goalWaterM3').value = goals.waterM3;
+            document.getElementById('alertThreshold').value = alertThreshold;
+        }
+
+        function checkAlertsAndGoals() {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = '';
+
+            if (records.length < 2) return;
+
+            const last = records[records.length - 1];
+            const prev = records[records.length - 2];
+
+            // Alerta Energia
+            if (last.energyKwh !== null && prev.energyKwh !== null) {
+                const dailyLast = last.energyKwh / last.days;
+                const dailyPrev = prev.energyKwh / prev.days;
+                const diffPerc = ((dailyLast - dailyPrev) / dailyPrev) * 100;
+
+                if (diffPerc >= alertThreshold) {
+                    alertContainer.innerHTML += `
+                        <div class="p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl flex items-center gap-3 text-xs sm:text-sm font-semibold shadow-sm">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xl flex-shrink-0"></i>
+                            <div>
+                                <span class="font-bold uppercase">Alerta de Aumento em Energia Elétrica!</span>
+                                O consumo médio diário subiu <span class="font-extrabold text-amber-700">${diffPerc.toFixed(1)}%</span> em relação ao mês anterior (${dailyLast.toFixed(2)} vs ${dailyPrev.toFixed(2)} kWh/dia).
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Alerta Água
+            if (last.waterM3 !== null && prev.waterM3 !== null) {
+                const dailyLast = last.waterM3 / last.days;
+                const dailyPrev = prev.waterM3 / prev.days;
+                const diffPerc = ((dailyLast - dailyPrev) / dailyPrev) * 100;
+
+                if (diffPerc >= alertThreshold) {
+                    alertContainer.innerHTML += `
+                        <div class="p-4 bg-sky-50 border border-sky-200 text-sky-900 rounded-2xl flex items-center gap-3 text-xs sm:text-sm font-semibold shadow-sm">
+                            <i class="fa-solid fa-droplet-slash text-sky-600 text-xl flex-shrink-0"></i>
+                            <div>
+                                <span class="font-bold uppercase">Alerta de Aumento em Água!</span>
+                                O consumo médio diário de água subiu <span class="font-extrabold text-sky-700">${diffPerc.toFixed(1)}%</span> em relação ao mês anterior (${dailyLast.toFixed(2)} vs ${dailyPrev.toFixed(2)} m³/dia).
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function calcIntermedForecast() {
+            const days = parseFloat(document.getElementById('interDays').value) || 1;
+            const kwh = parseFloat(document.getElementById('interKwh').value) || 0;
+            const m3 = parseFloat(document.getElementById('interM3').value) || 0;
+
+            const projKwh = (kwh / days) * 30;
+            const projM3 = (m3 / days) * 30;
+
+            const energyCost = projKwh * (tariffs.energyRate + tariffs.energyFlag);
+            let waterCost = tariffs.waterTier1;
+            if (projM3 > 10) {
+                waterCost += (projM3 - 10) * tariffs.waterTier2;
+            }
+
+            document.getElementById('forecastInterEnergy').innerText = formatCurrency(energyCost);
+            document.getElementById('forecastInterWater').innerText = formatCurrency(waterCost);
+            document.getElementById('forecastInterTotal').innerText = formatCurrency(energyCost + waterCost);
+        }
+
+        function runSimulation() {
+            const perc = parseFloat(document.getElementById('simPerc').value) || 15;
+            document.getElementById('simPercLabel').innerText = `${perc}%`;
+
+            const latestEnergy = [...records].reverse().find(r => r.energyCost !== null && r.energyCost !== undefined);
+            const latestWater = [...records].reverse().find(r => r.waterCost !== null && r.waterCost !== undefined);
+
+            const baseEnergy = latestEnergy ? latestEnergy.energyCost : 150;
+            const baseWater = latestWater ? latestWater.waterCost : 80;
+            const totalBase = baseEnergy + baseWater;
+
+            const monthlySavings = totalBase * (perc / 100);
+            const yearlySavings = monthlySavings * 12;
+
+            document.getElementById('simMonthlySavings').innerText = formatCurrency(monthlySavings);
+            document.getElementById('simYearlySavings').innerText = formatCurrency(yearlySavings);
+        }
+
+        // Carregar dados salvos no dispositivo
+        function loadFromLocalStorage() {
+            try {
+                const savedRecords = localStorage.getItem('monitor_records');
+                if (savedRecords) records = JSON.parse(savedRecords);
+
+                const savedGoals = localStorage.getItem('monitor_goals');
+                if (savedGoals) goals = JSON.parse(savedGoals);
+
+                const savedTariffs = localStorage.getItem('monitor_tariffs');
+                if (savedTariffs) tariffs = JSON.parse(savedTariffs);
+
+                const savedThreshold = localStorage.getItem('monitor_alertThreshold');
+                if (savedThreshold) alertThreshold = parseFloat(savedThreshold);
+
+                const savedActions = localStorage.getItem('monitor_actions');
+                if (savedActions) actions = JSON.parse(savedActions);
+            } catch (e) {
+                console.error("Erro ao carregar dados locais:", e);
+            }
+        }
+
+        // Salvar permanentemente os dados no navegador do usuário
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('monitor_records', JSON.stringify(records));
+                localStorage.setItem('monitor_goals', JSON.stringify(goals));
+                localStorage.setItem('monitor_tariffs', JSON.stringify(tariffs));
+                localStorage.setItem('monitor_alertThreshold', alertThreshold.toString());
+                localStorage.setItem('monitor_actions', JSON.stringify(actions));
+            } catch (e) {
+                console.error("Erro ao salvar dados no navegador:", e);
+            }
+        }
+
+        function switchTab(tabId) {
+            ['dashboard', 'tariffs', 'planning', 'estimates', 'sustainability', 'academic'].forEach(id => {
+                const content = document.getElementById(`tab-${id}`);
+                const btn = document.getElementById(`tabBtn-${id}`);
+                if (id === tabId) {
+                    content.classList.remove('hidden');
+                    if (id === 'academic') {
+                        btn.className = "py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition flex items-center gap-2 bg-purple-600 text-white shadow-sm";
+                        updateAcademicTab();
+                    } else {
+                        btn.className = "py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition flex items-center gap-2 bg-blue-600 text-white shadow-sm";
+                    }
+                } else {
+                    content.classList.add('hidden');
+                    if (id === 'academic') {
+                        btn.className = "py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition flex items-center gap-2 bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200";
+                    } else {
+                        btn.className = "py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition flex items-center gap-2 bg-slate-100 text-slate-600 hover:bg-slate-200";
+                    }
+                }
+            });
+        }
+
+        function updateAcademicTab() {
+            const totalMonths = records.length;
+            document.getElementById('acadTotalMonths').innerText = `${totalMonths} ${totalMonths === 1 ? 'Mês' : 'Meses'}`;
+
+            let totalEnergyKwh = 0;
+            let totalEnergyCost = 0;
+            let totalWaterM3 = 0;
+            let totalWaterCost = 0;
+
+            records.forEach(r => {
+                if (r.energyKwh) totalEnergyKwh += r.energyKwh;
+                if (r.energyCost) totalEnergyCost += r.energyCost;
+                if (r.waterM3) totalWaterM3 += r.waterM3;
+                if (r.waterCost) totalWaterCost += r.waterCost;
+            });
+
+            const totalInvested = totalEnergyCost + totalWaterCost;
+            // Estimativa de ~0.085 kg CO2 por kWh no sistema elétrico brasileiro
+            const co2Kg = (totalEnergyKwh * 0.085).toFixed(1);
+            const waterLiters = totalWaterM3 * 1000;
+
+            document.getElementById('acadTotalEnergy').innerText = `${totalEnergyKwh.toFixed(1)} kWh`;
+            document.getElementById('acadEnergyCo2').innerText = `~${co2Kg} kg de CO₂ equivalente`;
+            document.getElementById('acadTotalWater').innerText = `${totalWaterM3.toFixed(1)} m³`;
+            document.getElementById('acadWaterLiters').innerText = `${waterLiters.toLocaleString('pt-BR')} Litros de Água`;
+            document.getElementById('acadTotalInvested').innerText = formatCurrency(totalInvested);
+
+            // Gerar resumo textual sintético
+            const summaryBox = document.getElementById('acadSummaryText');
+            if (records.length === 0) {
+                summaryBox.innerHTML = `<p class="text-slate-400 italic">Cadastre ao menos uma conta no Painel Principal para visualizar o resumo consolidado da sua atividade de extensão.</p>`;
+                document.getElementById('acadResultsBox').innerHTML = `<p class="text-slate-400">Sem dados suficientes.</p>`;
+                return;
+            }
+
+            const firstPeriod = formatPeriodLabel(records[0].period);
+            const lastPeriod = formatPeriodLabel(records[records.length - 1].period);
+
+            summaryBox.innerHTML = `
+                <p>
+                    O projeto de extensão intitulado <strong>“Monitoramento digital de água e energia: tecnologia para a economia doméstica sustentável”</strong> acompanhou a dinâmica de consumo no período entre <strong>${firstPeriod}</strong> e <strong>${lastPeriod}</strong> (${totalMonths} medições faturadas).
+                </p>
+                <p>
+                    Ao longo da intervenção, foram registrados um consumo total acumulado de <strong>${totalEnergyKwh.toFixed(1)} kWh</strong> de energia elétrica e <strong>${totalWaterM3.toFixed(1)} m³</strong> de água, somando um investimento financeiro de <strong>${formatCurrency(totalInvested)}</strong>.
+                </p>
+                <p>
+                    Foram implementadas <strong>${actions.length} ações sustentáveis</strong> pela família, visando a otimização dos hábitos de consumo e o engajamento comunitário na redução do impacto ambiental doméstico.
+                </p>
+            `;
+
+            // Gerar caixa de resultados
+            let trendEnergyText = "Estável";
+            let trendWaterText = "Estável";
+
+            if (records.length >= 2) {
+                const recA = records[0];
+                const recB = records[records.length - 1];
+
+                if (recA.energyKwh && recB.energyKwh) {
+                    const diff = ((recB.energyKwh / recB.days) - (recA.energyKwh / recA.days)) / (recA.energyKwh / recA.days) * 100;
+                    trendEnergyText = diff <= 0 ? `Redução de ${Math.abs(diff).toFixed(1)}% na média diária` : `Aumento de ${diff.toFixed(1)}% na média diária`;
+                }
+
+                if (recA.waterM3 && recB.waterM3) {
+                    const diff = ((recB.waterM3 / recB.days) - (recA.waterM3 / recA.days)) / (recA.waterM3 / recA.days) * 100;
+                    trendWaterText = diff <= 0 ? `Redução de ${Math.abs(diff).toFixed(1)}% na média diária` : `Aumento de ${diff.toFixed(1)}% na média diária`;
+                }
+            }
+
+            document.getElementById('acadResultsBox').innerHTML = `
+                <div class="flex justify-between items-center py-1.5 border-b border-slate-200">
+                    <span class="font-semibold text-slate-700">Tendência Energia (kWh/dia):</span>
+                    <span class="font-bold text-teal-700">${trendEnergyText}</span>
+                </div>
+                <div class="flex justify-between items-center py-1.5 border-b border-slate-200">
+                    <span class="font-semibold text-slate-700">Tendência Água (m³/dia):</span>
+                    <span class="font-bold text-sky-700">${trendWaterText}</span>
+                </div>
+                <div class="flex justify-between items-center py-1.5">
+                    <span class="font-semibold text-slate-700">Ações Sustentáveis Registradas:</span>
+                    <span class="font-bold text-purple-700">${actions.length} intervenções</span>
+                </div>
+            `;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+
+            if (records.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-5 py-8 text-center text-slate-400">
+                            <i class="fa-solid fa-folder-open text-3xl mb-2 text-slate-300 block"></i>
+                            Nenhum registro cadastrado ainda.<br>Clique no botão <span class="font-bold text-slate-700">"+ Adicionar"</span> para cadastrar sua primeira conta.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            [...records].reverse().forEach((rec) => {
+                const idx = records.findIndex(r => r.period === rec.period);
+                const energyText = (rec.energyKwh !== null && rec.energyKwh !== undefined) ? `<span class="font-extrabold text-teal-800">${rec.energyKwh} kWh</span> (${formatCurrency(rec.energyCost)})` : '<span class="text-slate-400">--</span>';
+                const energyDaily = (rec.energyKwh !== null && rec.energyKwh !== undefined) ? `${(rec.energyKwh / rec.days).toFixed(1)} kWh/d` : '--';
+
+                const waterText = (rec.waterM3 !== null && rec.waterM3 !== undefined) ? `<span class="font-extrabold text-sky-800">${rec.waterM3} m³</span> (${formatCurrency(rec.waterCost)})` : '<span class="text-slate-400">--</span>';
+                const waterDaily = (rec.waterM3 !== null && rec.waterM3 !== undefined) ? `${(rec.waterM3 / rec.days).toFixed(1)} m³/d` : '--';
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition text-slate-700 font-medium";
+                tr.innerHTML = `
+                    <td class="px-5 py-3.5 font-bold text-slate-900">${formatPeriodLabel(rec.period)}</td>
+                    <td class="px-5 py-3.5">${rec.days} dias</td>
+                    <td class="px-5 py-3.5">${energyText}</td>
+                    <td class="px-5 py-3.5 text-xs text-slate-500">${energyDaily}</td>
+                    <td class="px-5 py-3.5">${waterText}</td>
+                    <td class="px-5 py-3.5 text-xs text-slate-500">${waterDaily}</td>
+                    <td class="px-5 py-3.5 text-right space-x-1">
+                        <button onclick="editRecord(${idx})" class="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteRecord(${idx})" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function saveTariffs() {
+            tariffs.energyRate = parseFloat(document.getElementById('tariffEnergyRate').value) || 0;
+            tariffs.energyFlag = parseFloat(document.getElementById('tariffEnergyFlag').value) || 0;
+            tariffs.waterTier1 = parseFloat(document.getElementById('tariffWaterTier1').value) || 0;
+            tariffs.waterTier2 = parseFloat(document.getElementById('tariffWaterTier2').value) || 0;
+
+            saveToLocalStorage();
+            updateUI();
+            showModal("Tarifas Atualizadas", "As novas tarifas e bandeiras foram gravadas para os próximos cálculos.", "success");
+        }
+
+        function saveGoals() {
+            goals.energyKwh = parseFloat(document.getElementById('goalEnergyKwh').value) || 0;
+            goals.waterM3 = parseFloat(document.getElementById('goalWaterM3').value) || 0;
+            
+            saveToLocalStorage();
+            updateUI();
+            showModal("Metas Salvas", "Novas metas estabelecidas para a família.", "success");
+        }
+
+        function saveAlertThreshold() {
+            alertThreshold = parseFloat(document.getElementById('alertThreshold').value);
+            saveToLocalStorage();
+            updateUI();
+        }
+
+        function addAction(event) {
+            event.preventDefault();
+            const text = document.getElementById('actionText').value;
+            const category = document.getElementById('actionCategory').value;
+            const date = new Date().toISOString().split('T')[0];
+
+            actions.unshift({ text, category, date });
+            document.getElementById('actionText').value = '';
+            
+            saveToLocalStorage();
+            renderActions();
+            showModal("Ação Registrada", "Boa atitude! Registrado no diário da família.", "success");
+        }
+
+        function renderActions() {
+            const container = document.getElementById('actionList');
+            container.innerHTML = '';
+
+            if (actions.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-400 text-center py-3">Nenhuma ação anotada ainda. Ex: "Troca das lâmpadas por LED".</div>`;
+                return;
+            }
+
+            actions.forEach(a => {
+                const badge = a.category === 'energy' 
+                    ? '<span class="bg-teal-100 text-teal-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Energia</span>'
+                    : '<span class="bg-sky-100 text-sky-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Água</span>';
+
+                container.innerHTML += `
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            ${badge}
+                            <span class="text-slate-800 font-bold">${a.text}</span>
+                        </div>
+                        <span class="text-slate-400 text-[10px]">${a.date}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function saveRecord(event) {
+            event.preventDefault();
+            const editIndex = parseInt(document.getElementById('editIndex').value);
+            const period = document.getElementById('inputPeriod').value;
+            const days = parseInt(document.getElementById('inputDays').value) || 30;
+
+            const energyKwhRaw = document.getElementById('inputEnergyKwh').value;
+            const energyCostRaw = document.getElementById('inputEnergyCost').value;
+            const waterM3Raw = document.getElementById('inputWaterM3').value;
+            const waterCostRaw = document.getElementById('inputWaterCost').value;
+
+            if (energyKwhRaw === '' && waterM3Raw === '') {
+                showModal("Atenção", "Preencha ao menos um serviço (Energia ou Água).", "warning");
+                return;
+            }
+
+            const energyKwh = energyKwhRaw !== '' ? parseFloat(energyKwhRaw) : null;
+            const energyCost = energyCostRaw !== '' ? parseFloat(energyCostRaw) : null;
+            const waterM3 = waterM3Raw !== '' ? parseFloat(waterM3Raw) : null;
+            const waterCost = waterCostRaw !== '' ? parseFloat(waterCostRaw) : null;
+
+            const newRecord = { period, days, energyKwh, energyCost, waterM3, waterCost };
+
+            if (editIndex >= 0) {
+                records[editIndex] = newRecord;
+            } else {
+                records.push(newRecord);
+            }
+
+            saveToLocalStorage();
+            closeRecordModal();
+            updateUI();
+            showModal("Registro Salvo", "Consumo gravado com sucesso! Os dados foram salvos neste dispositivo.", "success");
+        }
+
+        function deleteRecord(idx) {
+            records.splice(idx, 1);
+            saveToLocalStorage();
+            updateUI();
+            showModal("Excluído", "Registro removido com sucesso.", "info");
+        }
+
+        function exportCSV() {
+            let csv = "Mes_Ano;Dias;Energia_kWh;Energia_R$;Agua_m3;Agua_R$\n";
+            records.forEach(r => {
+                csv += `${r.period};${r.days};${r.energyKwh || ''};${r.energyCost || ''};${r.waterM3 || ''};${r.waterCost || ''}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", "monitoramento_agua_energia.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportDataJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ records, goals, tariffs, actions }));
+            const link = document.createElement("a");
+            link.href = dataStr;
+            link.setAttribute("download", "backup_monitoramento.json");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function openHelpModal() {
+            const modal = document.getElementById('helpModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeHelpModal() {
+            const modal = document.getElementById('helpModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        function showModal(title, message, type = "info") {
+            const modal = document.getElementById('customModal');
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalMessage').innerText = message;
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('customModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+    </script>
+</body>
+</html>
